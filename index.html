@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Telltale — client-side checkout signal demo</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #8b93a3;
+    --accent: #5b9dff;
+    --ok: #3ecf8e;
+    --warn: #f5b94d;
+    --bad: #ff6b6b;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+  .wrap {
+    display: grid;
+    grid-template-columns: minmax(320px, 420px) 1fr;
+    gap: 20px;
+    padding: 20px 24px 60px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 15px; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+  input {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font: 15px/1.4 var(--mono);
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+
+  button.pay {
+    margin-top: 20px;
+    width: 100%;
+    background: var(--accent);
+    color: #08101f;
+    border: 0;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button.pay:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* consent banner */
+  .consent {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .consent strong { color: var(--text); }
+  .consent .btns { margin-top: 10px; display: flex; gap: 8px; }
+  .consent button {
+    flex: 1; border-radius: 7px; padding: 8px; cursor: pointer; font-size: 13px;
+    border: 1px solid var(--border);
+  }
+  .consent .accept { background: var(--accent); color: #08101f; border: 0; font-weight: 600; }
+  .consent .decline { background: transparent; color: var(--text); }
+
+  /* dashboard */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+
+  .sig-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sig-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+  .sig-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .sig-table td.k { color: var(--muted); white-space: nowrap; }
+  .sig-table td.v { font-family: var(--mono); word-break: break-word; }
+
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill.tab { background: #1d3a5f; color: #9fc3ff; }
+  .pill.mouse { background: #3a2d1d; color: #f5cf8f; }
+  .pill.paste { background: #4a1f2a; color: #ff9ba8; }
+  .pill.type { background: #1d3f2e; color: #8fe0b4; }
+
+  .flags { list-style: none; margin: 0; padding: 0; }
+  .flags li {
+    padding: 9px 12px; border-radius: 8px; margin-bottom: 8px;
+    border: 1px solid var(--border); font-size: 13px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .flags li .lvl { font-weight: 700; flex-shrink: 0; width: 56px; font-size: 11px; text-transform: uppercase; padding-top: 1px; }
+  .flags li.high { border-color: #5a2a2a; background: #241618; }
+  .flags li.high .lvl { color: var(--bad); }
+  .flags li.medium { border-color: #564324; background: #221d12; }
+  .flags li.medium .lvl { color: var(--warn); }
+  .flags li.low { border-color: #2a3a4a; background: #15202a; }
+  .flags li.low .lvl { color: var(--accent); }
+  .flags li .detail { color: var(--muted); }
+  .flags li .detail b { color: var(--text); font-weight: 600; }
+
+  .score { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .score .num { font-size: 34px; font-weight: 700; font-family: var(--mono); }
+  .score .band { font-size: 13px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .band.Low { background: #14392a; color: var(--ok); }
+  .band.Elevated { background: #3d3115; color: var(--warn); }
+  .band.High { background: #3d1a1a; color: var(--bad); }
+
+  pre.payload {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font: 12px/1.5 var(--mono); color: #cdd6e6;
+    overflow: auto; max-height: 420px; margin: 0;
+  }
+  .note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .muted-disabled { opacity: .4; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Telltale</h1>
+  <p>Illustrative only. No data leaves your browser. Demonstrates the behavioral &amp; device signals a checkout page can collect and post alongside a payment intent.</p>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: the checkout form -->
+  <section>
+    <div class="consent" id="consent">
+      <strong>Fraud-prevention &amp; cookies notice.</strong>
+      We collect device characteristics (graphics, audio &amp; font fingerprints) to prevent payment
+      fraud. Under GDPR / ePrivacy these require your consent. Behavioral timing strictly
+      necessary for fraud prevention is collected under legitimate interest either way.
+      <div class="btns">
+        <button class="accept" id="consentAccept">Accept device fingerprinting</button>
+        <button class="decline" id="consentDecline">Behavioral only</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Payment details</h2>
+      <form id="checkout" autocomplete="on" novalidate>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" />
+
+        <label for="name">Name on card</label>
+        <input id="name" name="cardName" type="text" autocomplete="cc-name" />
+
+        <label for="card">Card number</label>
+        <input id="card" name="cardNumber" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="4242 4242 4242 4242" />
+
+        <div class="row">
+          <div>
+            <label for="exp">Expiry</label>
+            <input id="exp" name="cardExpiry" type="text" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/YY" />
+          </div>
+          <div>
+            <label for="cvv">CVV</label>
+            <input id="cvv" name="cardCvv" type="text" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" />
+          </div>
+        </div>
+
+        <button class="pay" type="submit" id="payBtn">Pay $49.00</button>
+      </form>
+      <p class="note">Try it as a human, then open the console and run
+        <code>Telltale.simulateBot()</code> to see scripted-fill signals.</p>
+    </div>
+  </section>
+
+  <!-- RIGHT: live signal dashboard -->
+  <section>
+    <div class="card" style="margin-bottom:20px;">
+      <h2>Risk assessment <span style="color:var(--muted);font-weight:400;font-size:12px">(demo heuristic — never decisive on its own)</span></h2>
+      <div class="score">
+        <div class="num" id="scoreNum">0</div>
+        <div class="band Low" id="scoreBand">Low</div>
+      </div>
+      <ul class="flags" id="flags"><li class="low"><span class="lvl">info</span><span class="detail">No anomalies yet. Fill the form above.</span></li></ul>
+    </div>
+
+    <div class="grid" style="margin-bottom:20px;">
+      <div class="card">
+        <h2>Behavioral signals (per field)</h2>
+        <table class="sig-table">
+          <thead><tr><th>Field</th><th>Dwell</th><th>Nav</th><th>Paste</th><th>Re-edits</th></tr></thead>
+          <tbody id="behaviorRows"><tr><td colspan="5" style="color:var(--muted)">—</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card" id="deviceCard">
+        <h2>Device / environment signals</h2>
+        <table class="sig-table"><tbody id="deviceRows"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Payload posted to backend</h2>
+      <pre class="payload" id="payload">// Press “Pay” to assemble the JSON posted alongside the payment intent.</pre>
+      <p class="note">In production this is sent with <code>navigator.sendBeacon()</code> /
+        <code>fetch()</code> to your risk endpoint, keyed to the same idempotency / payment-intent ID —
+        never used as the sole accept/decline factor.</p>
+    </div>
+  </section>
+</div>
+
+<script src="signals.js"></script>
+</body>
+</html>
