@@ -154,19 +154,6 @@ Telltale.snapshot()   // the full payload object, without pressing Pay
 
 ---
 
-## Backend side (not included)
-
-In production, `signals.js` ships the payload with
-`navigator.sendBeacon('/api/risk-signals', blob)` keyed to the `PaymentIntent` id. The server
-should:
-
-1. Store the raw signals against the payment attempt.
-2. **Re-validate** anything security-relevant server-side (user-agent, IP geolocation vs
-   claimed timezone, ASN reputation) — never trust the client's self-report.
-3. Feed the features into your risk model or rules engine as **inputs**, not as a verdict.
-
----
-
 ## License
 
 MIT.
