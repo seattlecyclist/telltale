@@ -16,6 +16,11 @@ how to weight it without fooling yourself.
 > and no payment is charged. Use it to understand the technique, not as a drop-in production
 > risk engine.
 
+> **Notes:** This is a receding signal category — mature anti-detect tooling and privacy-law
+> headwinds are eroding it, so treat client telemetry as a weak corroborator and push real bot
+> detection toward the network/TLS and identity-graph layers. See
+> [Why This Approach Is in Decline](#why-this-approach-is-in-decline).
+
 ---
 
 ## Goals
