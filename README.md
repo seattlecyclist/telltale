@@ -2,6 +2,10 @@
 
 **Client-side checkout signals for payment-fraud detection.**
 
+**▶ Live demo: <https://seattlecyclist.github.io/telltale/>**
+
+![Telltale dashboard: a checkout form on the left; on the right a risk panel scoring a pasted CVV as HIGH (Elevated, 30), a per-field behavioral table (dwell, tab-vs-mouse, paste ratio, re-edits), and a device-signals table showing UA family, viewport, WebGL renderer, timezone and font count.](screenshot.png)
+
 Telltale is a small, dependency-free JavaScript library that watches *how* a checkout
 form is filled and *what environment* fills it, then posts a compact signal payload to your
 backend alongside the payment intent. It is a demonstration of the modern client-side
