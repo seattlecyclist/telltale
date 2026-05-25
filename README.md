@@ -65,6 +65,48 @@ how to weight it without fooling yourself.
 Each signal is weighted; contradictions between *claimed* and *actual* environment dominate
 the score, and timing-only signals carry a "flag, don't block" caveat.
 
+### How the device fingerprints work
+
+All three fingerprint surfaces are computed entirely in JavaScript, with **no permission
+prompt** and no access to the camera, microphone, or files. They exploit the fact that the
+same browser API produces subtly *different* output on different hardware/OS/browser
+combinations, while staying *stable* on the same machine. Individually weak, together they
+form a device identity — and, more usefully here, they let you catch a session whose
+fingerprint contradicts its claimed user-agent.
+
+- **WebGL renderer** — `UNMASKED_RENDERER_WEBGL` exposes the GPU/driver string, e.g.
+  `ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, …)` on a real Mac, or `ANGLE (Intel …)`
+  on a Windows/Linux box. A user-agent claiming iOS Safari paired with an Intel renderer is
+  the canonical spoof tell.
+
+- **AudioContext fingerprint** — *not* the user's audio; nothing is ever played. Telltale
+  renders a fixed graph offline (a 10 kHz triangle-wave oscillator → a `DynamicsCompressor`
+  with fixed parameters) via `OfflineAudioContext`, then sums a slice of the output samples.
+  Because that signal path is floating-point DSP, tiny differences in how each device/OS/
+  browser implements the math (rounding, library versions, CPU) yield a slightly different
+  number — deterministic per environment, varying across environments. The demo shows a value
+  like `124.04348156`. It carries only modest entropy on its own, but it's cheap, prompt-free,
+  and hard for a bot to fake *consistently* with its other claimed attributes.
+
+- **Font enumeration** — measures the rendered width/height of a test string in candidate
+  fonts; a font that isn't installed falls back to the base family, leaving dimensions
+  unchanged. The *set* of detected fonts is OS-characteristic (Segoe UI ⇒ Windows, Menlo ⇒
+  macOS, DejaVu/Ubuntu ⇒ Linux), so it both adds entropy and corroborates the claimed OS.
+
+**Caveats — treat fingerprints as corroboration, never identity:**
+
+- **Not unique.** Many identical devices share the same WebGL string, audio value, and font
+  set. A fingerprint is a few bits of entropy, not a stable user ID.
+- **Anti-fingerprinting defeats it.** Brave, Firefox's resist-fingerprinting, and Tor inject
+  noise or pin values, so the audio number may be randomized per-session or constant. Don't
+  treat a "weird" fingerprint as guilt — privacy-conscious real users look like this.
+- **The signal is the *contradiction*, not the value.** A fingerprint that disagrees with the
+  claimed user-agent (iOS UA + Intel GPU) is far more decisive than any single value, which is
+  why Telltale weights consistency checks above the raw fingerprints.
+- **Consent-gated (GDPR / ePrivacy).** These three surfaces only run after the user accepts
+  the fingerprinting consent banner; decline and the device table shows `fingerprint: declined`
+  and they are never collected. Behavioral timing is collected either way as strictly necessary.
+
 ---
 
 ## How to run
