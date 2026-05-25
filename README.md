@@ -109,6 +109,56 @@ fingerprint contradicts its claimed user-agent.
 
 ---
 
+## Why This Approach Is in Decline
+
+Behavioral telemetry and device fingerprinting are a receding signal category in a defended
+space against funded adversaries with privacy-law headwinds. Every structural force is moving
+the same direction. Even a thoughtfully designed implementation cannot outrun the trend. The
+right architectural answer is to move bot detection to the network and TLS layer (where the
+attacker can't choose the answer), move identity confidence to graph and history features
+(where you compound observations over time), and treat client telemetry as a weak
+corroborator at best.
+
+The pressure comes from four places at once:
+
+- **Adversarial tooling is mature.** Open-source kits (puppeteer-extra-stealth,
+  undetected-chromedriver) and commercial anti-detect browsers (Multilogin, Kameleo, GoLogin)
+  ship coherent fake environments that specifically defeat consistency-style detection. A
+  spoofed iOS Safari arrives with a matching GPU string, matching touch profile, matching
+  audio fingerprint, and matching font list. The contradiction the scorer was looking for is
+  no longer there.
+- **Browser vendors are shrinking the surface.** Safari's ITP and Lockdown Mode, Firefox's
+  resist-fingerprinting, and Chrome's Privacy Sandbox are reducing what any of these APIs
+  reveal, release by release. The Battery Status API often cited in older fraud literature is
+  the canonical case: gone in major browsers, no longer usable. The trajectory is more of the
+  same.
+- **False positives correlate with the wrong populations.** Privacy-conscious users (Tor,
+  Brave, hardened Firefox), corporate-managed devices with software rasterizers, VM and
+  remote-desktop users, and assistive-technology users all look bot-like to this style of
+  detection. Aggressive blocking on these signals declines exactly the users a merchant
+  least wants to lose.
+- **Stronger signals exist server-side.** The most reliable bot tells (automation flags,
+  headless markers, software rasterizers) also leak at the TLS and HTTP layer. JA3/JA4
+  fingerprints and HTTP/2 SETTINGS frame ordering catch the same automation tools more
+  reliably, on the very first request, without requiring JavaScript execution, without
+  consent, and without privacy-law exposure.
+
+Where Telltale-style signals still earn a place:
+
+1. **A weak corroborating feature in a model built mostly on stronger ones.** The signals
+   are not worthless, they are simply not load-bearing.
+2. **Early-stage triage when stronger features are not yet available.** Before account
+   history, graph data, or payment-instrument history exist, behavioral hints beat AVS and
+   CVV alone.
+3. **Narrow uses with controlled threat models.** Credential-stuffing detection on login
+   forms holds up better than fraud scoring at checkout, because both sides of the
+   comparison are under your control.
+
+Treat Telltale as an illustration of the *shape* of the signal, not a recommendation to
+center a fraud strategy on it.
+
+---
+
 ## How to run
 
 No build step, no dependencies — just static files.
